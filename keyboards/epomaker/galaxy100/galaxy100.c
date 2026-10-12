@@ -197,11 +197,14 @@ void suspend_wakeup_init_kb(void) {
 bool lpwr_is_allow_timeout_hook(void) {
 
     if (wireless_get_current_devs() == DEVS_USB) {
-        // Never deep-sleep on the cable: STOP mode only wakes on matrix/UART, not on
-        // USB bus activity. After a PC shutdown (suspended bus) the board would sit in
-        // STOP and fail enumeration on the next boot ("Device Descriptor Request
-        // Failed") until replugged. USB suspend still turns the LEDs off via QMK.
-        return false;
+        // Cable powered (PC on, asleep, or off with powered port): no deep sleep.
+        // STOP doesn't wake on USB bus activity, so the board would miss the bus
+        // reset on the next boot and fail enumeration until replugged. QMK's USB
+        // suspend still turns the LEDs off and handles remote wakeup.
+        // No cable power (PC off, port unpowered): running on battery -> sleep.
+        // The weak lpwr_is_allow_presleep_hook then disconnects USB, the cable pin
+        // wakes us when power returns and lpwr_is_allow_wakeup_hook restarts USB.
+        return !charging_state;
     }
 
     // In wireless modes (BT/2.4G) we avoid deep STOP because it prevents reliable
@@ -210,18 +213,6 @@ bool lpwr_is_allow_timeout_hook(void) {
     return false;
 }
 
-bool lpwr_is_allow_presleep_hook(void) {
-    // USB mode: Keep USB connected for remote wakeup (don't disconnect)
-    // Original would disconnect when not charging, but we keep it for wake support
-    if (wireless_get_current_devs() == DEVS_USB) {
-        // Don't disconnect USB - this allows USB remote wakeup to work
-        return true;
-    }
-    
-    // Wireless modes (BT/2.4G): Don't touch USB at all (original behavior)
-    // The original code only disconnected USB when in USB mode
-    return true;
-}
 
 void wireless_post_task(void) {
 
