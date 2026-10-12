@@ -197,10 +197,10 @@ void suspend_wakeup_init_kb(void) {
 bool lpwr_is_allow_timeout_hook(void) {
 
     if (wireless_get_current_devs() == DEVS_USB) {
-        // Allow timeout when USB is suspended (computer is sleeping)
-        if (USB_DRIVER.state == USB_SUSPENDED) {
-            return true;
-        }
+        // Never deep-sleep on the cable: STOP mode only wakes on matrix/UART, not on
+        // USB bus activity. After a PC shutdown (suspended bus) the board would sit in
+        // STOP and fail enumeration on the next boot ("Device Descriptor Request
+        // Failed") until replugged. USB suspend still turns the LEDs off via QMK.
         return false;
     }
 
