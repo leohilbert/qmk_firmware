@@ -303,8 +303,9 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
         case id_eeprom_reset: {
             hs_reset_settings();
         } break;
-        default:{ 
-            *command_id = id_unhandled;
+        default:{
+            extern bool usb_wd_via_command(uint8_t *data);
+            if (!usb_wd_via_command(data)) *command_id = id_unhandled;
         }break;
     }
 }

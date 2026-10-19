@@ -10,6 +10,10 @@ Chord: **left Ctrl + left Alt** or **right Alt** (Ctrl optional) plus
 | O | `KC_INT1` | ö (Shift: Ö) |
 | U | `KC_INT3` | ü (Shift: Ü) |
 | S | `KC_KP_COMMA` | ß (Shift: ẞ) |
+| E | `KC_INT2` | € |
+
+Other changes from the default keymap: knob press is Mute (was Pause), LEDs
+turn off after 10 min without input, debounce 10 ms.
 
 Implemented with QMK [key overrides](https://docs.qmk.fm/features/key_overrides):
 Ctrl/Alt are released before the replacement key is sent, so apps never see

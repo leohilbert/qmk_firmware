@@ -644,9 +644,78 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
 
+// Seen after a PC cold boot: Windows has the board configured, yet no key reports
+// and no VIA replies until the host re-enumerates it (replug). Likely the WB32 USB
+// driver missed a bus resume (its resume IRQ is never enabled) and stays
+// USB_SUSPENDED with the endpoint queues stopped. The frame number only advances
+// while the host sends SOFs, i.e. while the bus is really active, so: frame moving
+// but we're not USB_ACTIVE for 2 s -> re-enumerate, like a replug.
+// Counters readable via VIA: custom get value, channel 0, value 0x7E.
+// Also turns the LEDs off while the bus is suspended (PC asleep): that used to
+// happen via lpwr deep sleep, which lpwr_is_allow_timeout_hook now blocks on cable.
+static uint8_t usb_wd_restarts, usb_wd_last_state, usb_wd_suspends;
+
+void notify_usb_device_state_change_kb(struct usb_device_state usb_device_state) {
+    if (usb_device_state.configure_state == USB_DEVICE_STATE_SUSPEND && usb_wd_suspends < 255) usb_wd_suspends++;
+    notify_usb_device_state_change_user(usb_device_state);
+}
+
+static void usb_watchdog_task(void) {
+    static uint32_t check_timer, stuck_since;
+    static uint16_t last_frame;
+    static uint8_t tries; // gives up after 3 restarts without reaching ACTIVE (host that never configures us)
+    static bool leds_off;
+
+    if (timer_elapsed32(check_timer) < 500) return;
+    check_timer = timer_read32();
+
+    uint16_t frame   = usb_lld_get_frame_number(&USB_DRIVER);
+    bool host_active = frame != last_frame;
+    last_frame       = frame;
+
+    // Woken up again via the USB wakeup event or a key press (suspend_wakeup_init)
+    if (USB_DRIVER.state == USB_SUSPENDED && wireless_get_current_devs() == DEVS_USB) {
+        if (!leds_off) suspend_power_down();
+        leds_off = true;
+    } else {
+        leds_off = false;
+    }
+
+    if (USB_DRIVER.state == USB_ACTIVE) tries = 0;
+    if (wireless_get_current_devs() != DEVS_USB || USB_DRIVER.state == USB_ACTIVE || USB_DRIVER.state == USB_STOP || !host_active || tries >= 3) {
+        stuck_since = 0;
+        return;
+    }
+    if (!stuck_since) {
+        stuck_since       = check_timer | 1;
+        usb_wd_last_state = USB_DRIVER.state;
+    } else if (timer_elapsed32(stuck_since) >= 2000) {
+        extern bool last_suspend_state;
+        stuck_since        = 0;
+        last_suspend_state = true; // so CONFIGURED also replays the wakeup (see usb_transport_enable)
+        tries++;
+        if (usb_wd_restarts < 255) usb_wd_restarts++;
+        restart_usb_driver(&USB_DRIVER);
+    }
+}
+
+#ifdef VIA_ENABLE
+// Called from via_custom_value_command_kb in wls/wls.c
+bool usb_wd_via_command(uint8_t *data) {
+    // data = [ command_id, channel_id, value_id, value_data ]
+    if (data[0] != id_custom_get_value || data[1] != id_custom_channel || data[2] != 0x7E) return false;
+    data[3] = usb_wd_restarts;
+    data[4] = usb_wd_last_state;
+    data[5] = usb_wd_suspends;
+    data[6] = USB_DRIVER.state;
+    return true;
+}
+#endif
+
 void housekeeping_task_user(void) {
 
     charging_state = readPin(HS_BAT_CABLE_PIN);
+    usb_watchdog_task();
 }
 
 #ifdef RGB_MATRIX_ENABLE

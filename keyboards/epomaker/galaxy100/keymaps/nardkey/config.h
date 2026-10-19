@@ -8,6 +8,9 @@
 #undef DEBOUNCE
 #define DEBOUNCE 10
 
+// LEDs off after 10 min without input (PC on but nobody at it); next key turns them on
+#define RGB_MATRIX_TIMEOUT 600000
+
 // Key overrides release Ctrl/Alt before sending the umlaut scancode. A bare
 // Alt press+release would open the menu bar in Windows apps, so tap a dummy
 // key first. Exact-match list: every umlaut chord, with and without Shift.
