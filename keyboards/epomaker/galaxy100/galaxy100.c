@@ -715,6 +715,20 @@ bool usb_wd_via_command(uint8_t *data) {
 void housekeeping_task_user(void) {
 
     charging_state = readPin(HS_BAT_CABLE_PIN);
+
+    // The WB32 USB driver never enables the bus-resume interrupt (usb_lld_start
+    // zeroes INTRUSBE, usb_lld_reset only adds SUSIE), so a host-initiated resume
+    // is only noticed if some other USB interrupt happens to fire. Windows
+    // selectively suspends the board during normal use (DeviceSelectiveSuspended=1,
+    // e.g. when Unity closes its HID handles); a missed resume leaves it
+    // USB_SUSPENDED with stopped endpoint queues: dead or dropped until replug.
+    // Re-checked every pass because usbStart (USB restart) zeroes it again.
+    if (!(WB32_USB->INTRUSBE & USB_INTRUSBE_RSUIE)) {
+        chSysLock();
+        WB32_USB->INTRUSBE |= USB_INTRUSBE_RSUIE;
+        chSysUnlock();
+    }
+
     usb_watchdog_task();
 }
 
