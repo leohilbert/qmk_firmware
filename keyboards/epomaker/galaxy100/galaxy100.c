@@ -690,12 +690,12 @@ static void usb_watchdog_task(void) {
         stuck_since       = check_timer | 1;
         usb_wd_last_state = USB_DRIVER.state;
     } else if (timer_elapsed32(stuck_since) >= 2000) {
-        extern bool last_suspend_state;
-        stuck_since        = 0;
-        last_suspend_state = true; // so CONFIGURED also replays the wakeup (see usb_transport_enable)
+        // Observe only: actually restarting made the board drop off the bus
+        // constantly (re-enumerated 2 s after every connect under load). Count
+        // instead, so the diagnostics show whether/when it would trigger.
+        stuck_since = 0;
         tries++;
         if (usb_wd_restarts < 255) usb_wd_restarts++;
-        restart_usb_driver(&USB_DRIVER);
     }
 }
 
