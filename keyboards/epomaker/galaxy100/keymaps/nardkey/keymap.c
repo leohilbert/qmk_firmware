@@ -5,7 +5,7 @@
 //   left Ctrl + left Alt   or   right Alt (with or without Ctrl).
 // The chord is replaced by a scancode the NardKey Windows layout maps to
 // ä/ö/ü/ß/€ (https://github.com/leohilbert/nardkey), so the host never sees
-// Ctrl/Alt and app shortcuts can't swallow it. Shift passes through -> Ä/Ö/Ü/ẞ.
+// Ctrl/Alt and app shortcuts can't swallow it. Shift passes through -> Ä/Ö/Ü.
 // Left Alt alone stays a normal Alt (Alt+A etc. still reach apps).
 
 #include QMK_KEYBOARD_H
@@ -44,8 +44,8 @@ const key_override_t r_ae = UMLAUT(RIGHT_A, KC_A, KC_NUBS);
 const key_override_t r_oe = UMLAUT(RIGHT_A, KC_O, KC_INT1);
 const key_override_t r_ue = UMLAUT(RIGHT_A, KC_U, KC_INT3);
 const key_override_t r_ss = UMLAUT(RIGHT_A, KC_S, KC_KP_COMMA);
-const key_override_t l_eu = UMLAUT(LEFT_CA, KC_E, KC_INT2);     // SC 70 -> €
-const key_override_t r_eu = UMLAUT(RIGHT_A, KC_E, KC_INT2);
+const key_override_t l_eu = UMLAUT(LEFT_CA, KC_E, LSFT(KC_KP_COMMA)); // Shift + SC 7E -> €
+const key_override_t r_eu = UMLAUT(RIGHT_A, KC_E, LSFT(KC_KP_COMMA));
 
 const key_override_t *key_overrides[] = {
     &l_ae, &l_oe, &l_ue, &l_ss, &l_eu,
