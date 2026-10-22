@@ -413,7 +413,8 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
         case QK_BOOT: {
             if (record->event.pressed) {
                 dprintf("into boot!!!\r\n");
-                eeconfig_disable();
+                // Epomaker called eeconfig_disable() here, which wiped all settings
+                // (lighting etc.) on the next boot after every flash.
                 bootloader_jump();
             }
         } break;
